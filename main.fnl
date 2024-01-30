@@ -1,3 +1,5 @@
+(local (window-width window-height) (love.window.getMode))
+
 (fn love.load []
   ;; start new thread listening on stdin
   (: (love.thread.newThread "require('love.event')
@@ -11,7 +13,7 @@ while 1 do love.event.push('stdin', io.read('*line')) end") :start)
                   :speed 200
                   :score 0})
 
-  (global opponent {:x (- (love.graphics.getWidth) 10 25) 
+  (global opponent {:x (- window-width 10 25)
                     :y 10
                     :width 25
                     :height 100
@@ -19,8 +21,8 @@ while 1 do love.event.push('stdin', io.read('*line')) end") :start)
                     :dy 0
                     :score 0})
 
-  (global ball {:x (/ (love.graphics.getWidth) 2)
-                :y (love.math.random 100 (love.graphics.getHeight))
+  (global ball {:x (/ window-width 2)
+                :y (love.math.random 100 window-height)
                 :width 25
                 :height 25
                 :dx -1
@@ -42,7 +44,7 @@ while 1 do love.event.push('stdin', io.read('*line')) end") :start)
   (var old-player-pos player.y)
   (var new-player-pos (love.mouse.getY))
   (when (or (< new-player-pos 0)
-            (> new-player-pos (- (love.graphics.getHeight) player.height)))
+            (> new-player-pos (- window-height player.height)))
     (set new-player-pos old-player-pos))
   (set player.y new-player-pos)
   (set player.dy (- new-player-pos old-player-pos))
@@ -55,43 +57,33 @@ while 1 do love.event.push('stdin', io.read('*line')) end") :start)
     ;; opponent score
     (when (< new-x-pos 0)
       (set opponent.score (+ opponent.score 1))
-      (set ball.x (/ (love.graphics.getWidth) 2))
-      (set ball.y (love.math.random 100 (love.graphics.getHeight)))
+      (set ball.x (/ window-width 2))
+      (set ball.y (love.math.random 100 window-height))
       (set ball.dx -1)
       (set ball.dy 1))
 
     ;; player score
-    (when (> new-x-pos (- (love.graphics.getWidth) ball.width))
+    (when (> new-x-pos (- window-width ball.width))
       (set player.score (+ player.score 1))
-      (set ball.x (/ (love.graphics.getWidth) 2))
-      (set ball.y (love.math.random 100 (love.graphics.getHeight)))
+      (set ball.x (/ window-width 2))
+      (set ball.y (love.math.random 100 window-height))
       (set ball.dx 1)
       (set ball.dy 1))
 
     ;; hit floor or ceiling
     (when (or
            (< new-y-pos 0)
-           (> new-y-pos (- (love.graphics.getHeight) ball.height)))
+           (> new-y-pos (- window-height ball.height)))
       (set ball.dy (* -1 ball.dy)))
 
-    ;; really basic collision detection w/ player paddle
-    (when (and (<= new-x-pos (+ player.x player.width))
-               (>= new-y-pos player.y)
-               (<= new-y-pos (+ player.y player.height)))
-      ;; match player acceleration
-      (when (and (>= player.dy ball.dx)
-                 (>= player.dy 1))
-          (set ball.dy (* -1 (math.abs player.dy)))
-          (set ball.dx (* -1 (math.abs player.dy))))
-      (when (and (< player.dy ball.dx)
-                 (< player.dy 1))
-          (set ball.dy (* -1 ball.dy))
-          (set ball.dx (* -1 ball.dy))))
-
-    ;; really basic collision detection w/ opponent paddle
-    (when (and (>= (+ new-x-pos ball.width) opponent.x)
-               (>= new-y-pos opponent.y)
-               (<= new-y-pos (+ opponent.y opponent.height)))
+    ;; really basic collision detection
+    (when (or
+           (and (< new-x-pos (+ player.x player.width))
+                (< (- player.y ball.height) new-y-pos)
+                (< new-y-pos (+ player.y player.height)))
+           (and (> (+ new-x-pos ball.width) opponent.x)
+                (< (- opponent.y ball.height) new-y-pos)
+                (< new-y-pos (+ opponent.y opponent.height))))
       (set ball.dx (* -1 ball.dx)))
 
     (set ball.x (+ ball.x (* ball.dx ball.speed dt)))
@@ -106,7 +98,7 @@ while 1 do love.event.push('stdin', io.read('*line')) end") :start)
   (let [new-y-pos (+ opponent.y (* opponent.dy opponent.speed dt))]
     (when (and
            (>= new-y-pos 0)
-           (<= new-y-pos (- (love.graphics.getHeight) opponent.height)))
+           (<= new-y-pos (- window-height opponent.height)))
       (set opponent.y new-y-pos)))
   
 
@@ -117,8 +109,8 @@ while 1 do love.event.push('stdin', io.read('*line')) end") :start)
 
 (fn love.draw []
   ;; scores
-  (love.graphics.print player.score (- (/ (love.graphics.getWidth) 2) 25) 25)
-  (love.graphics.print opponent.score (+ (/ (love.graphics.getWidth) 2) 25) 25)
+  (love.graphics.print player.score (- (/ window-width 2) 25) 25)
+  (love.graphics.print opponent.score (+ (/ window-width 2) 25) 25)
 
   ;; paddels
   (love.graphics.rectangle "fill" player.x player.y player.width player.height)
